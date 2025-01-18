@@ -5,7 +5,7 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  Image, 
+  Image,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
@@ -15,7 +15,6 @@ import { useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 const placeholderMessages = [
   "Hello! How can I assist you?",
@@ -28,56 +27,42 @@ const placeholderMessages = [
 const ChatScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { firstMessage } = route.params;
+  const { firstMessage, category } = route.params || {}; 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [inputHeight, setInputHeight] = useState(48);
-  const [marginBottom, setMarginBottom] = useState(-60);
- 
+  const [viewHeight, setViewHeight] = useState(106);
 
 
   useEffect(() => {
     const loadMessages = async () => {
+      if (!category) return;
       try {
-        const storedMessages = await AsyncStorage.getItem("messages");
-        if (storedMessages) {
-          setMessages(JSON.parse(storedMessages));
+        const storedData = await AsyncStorage.getItem(category);
+        if (storedData) {
+          setMessages(JSON.parse(storedData));
         }
       } catch (error) {
-        console.error("Error loading messages", error); 
+        console.error(`Error loading messages for category ${category}:`, error);
       }
     };
 
     loadMessages();
-  }, []);
+  }, [category]);
 
-
+  
   useEffect(() => {
     const saveMessages = async () => {
+      if (!category) return;
       try {
-        await AsyncStorage.setItem("messages", JSON.stringify(messages));
+        await AsyncStorage.setItem(category, JSON.stringify(messages));
       } catch (error) {
-        console.error("Error saving message to storage", error);
+        console.error(`Error saving messages for category ${category}:`, error);
       }
     };
 
     saveMessages();
-  }, [messages]);
-
- 
-  useEffect(() => {    
-    const keyboardShowListener = Keyboard.addListener("keyboardDidShow", () => {
-      setMarginBottom(-90); 
-    });
-    const keyboardHideListener = Keyboard.addListener("keyboardDidHide", () => {
-      setMarginBottom(-60); 
-    });
-    
-    return () => {
-      keyboardShowListener.remove();
-      keyboardHideListener.remove();
-    };
-  }, []);
+  }, [messages, category]);
 
   useEffect(() => {
     if (firstMessage && firstMessage.length > 0) {
@@ -85,8 +70,9 @@ const ChatScreen = () => {
     }
   }, [firstMessage]);
 
+
   const sendMessage = () => {
-    if (!text || text === "") return;
+    if (!text.trim()) return;
 
     const userMessage = {
       id: `${Date.now()}`,
@@ -95,7 +81,6 @@ const ChatScreen = () => {
     };
     setMessages((prev) => [userMessage, ...prev]);
     setText("");
-    setInputHeight(46);
 
     const botMessage =
       placeholderMessages[
@@ -109,21 +94,63 @@ const ChatScreen = () => {
     }, 1000);
   };
 
+
+  const handleInputFocus = () => {
+    if (!category) {
+      const randomPlaceholder =
+        placeholderMessages[
+          Math.floor(Math.random() * placeholderMessages.length)
+        ];
+      setMessages([{ id: Date.now().toString(), text: randomPlaceholder, sender: "bot" }]);
+    }
+  };
+
+
+
+
+  const clearChats = async () => {
+    try {
+      await AsyncStorage.clear(); 
+      console.log("All chats cleared from AsyncStorage.");
+      alert("All chats have been cleared!");
+    } catch (error) {
+      console.error("Failed to clear chats:", error);
+    }
+  };
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setViewHeight(84);
+      }
+    );
+
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setViewHeight(106);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   return (
     <KeyboardAvoidingView
-  style={{ flex: 1, backgroundColor: "#1C1D22" }}
-  behavior={Platform.OS === "ios" ? "padding" : "height"}
-  keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
->
+      style={{ flex: 1, backgroundColor: "#1C1D22" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-     
         <View
           style={{
             flex: 1,
             backgroundColor: "#1C1D22",
           }}
         >
-           
           <View
             style={{
               marginTop: 63,
@@ -151,10 +178,12 @@ const ChatScreen = () => {
               Chat
             </Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity onPress={clearChats} >
               <Image
                 source={require("../image/icon-filter.png")}
                 style={{ width: 24, height: 24 }}
               />
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate("Explore")}>
                 <Image
                   source={require("../image/icon-download.png")}
@@ -182,14 +211,13 @@ const ChatScreen = () => {
                       marginRight: item.sender === "user" ? 8 : 0,
                       alignSelf:
                         item.sender === "user" ? "flex-end" : "flex-start",
-                      overflow: "hidden", 
-                      width: item.sender === "user" ? "342" : "342",
+
                       marginBottom: 8,
                     }}
                   >
-                    {item.sender === "user" ? (                     
+                    {item.sender === "user" ? (
                       <LinearGradient
-                        colors={["#448ACA", "#5C34B1"]} 
+                        colors={["#448ACA", "#5C34B1"]}
                         start={{ x: -0.32, y: 0 }}
                         end={{ x: 1.22, y: 1 }}
                         seAngle={true}
@@ -197,14 +225,14 @@ const ChatScreen = () => {
                         style={{
                           paddingHorizontal: 16,
                           paddingVertical: 6,
-                          
+
                           borderTopLeftRadius: 16,
                           borderBottomRightRadius: 4,
                           borderTopRightRadius: 16,
                           borderBottomLeftRadius: 16,
-                          width: 342,                         
+                          width: 342,
                         }}
-                      >                       
+                      >
                         <Text
                           style={{
                             color: "#fff",
@@ -274,7 +302,7 @@ const ChatScreen = () => {
                           </View>
                         </View>
                       </LinearGradient>
-                    ) : (                     
+                    ) : (
                       <View
                         style={{
                           backgroundColor: "#333338",
@@ -285,12 +313,12 @@ const ChatScreen = () => {
                           borderBottomLeftRadius: 4,
                           paddingHorizontal: 16,
                           paddingVertical: 12,
-                          minHeight: 50, 
+                          minHeight: 50,
                         }}
-                      >                      
+                      >
                         <Text
                           style={{
-                            color: "#fff", 
+                            color: "#fff",
                             fontFamily: "Inter_400Regular",
                             fontSize: 16,
                             lineHeight: 22,
@@ -374,8 +402,7 @@ const ChatScreen = () => {
                   borderColor: "rgba(51, 51, 56, 1)",
                   borderWidth: 1,
                   paddingTop: 16,
-                  height: 106,
-                  marginBottom: marginBottom,
+                  height: viewHeight,
                 }}
               >
                 <View
@@ -395,63 +422,66 @@ const ChatScreen = () => {
                         fontSize: 16,
                         lineHeight: 22,
                         textAlignVertical: "top",
-                        minHeight: 48, 
-                        maxHeight: 120, 
+                        height: inputHeight,
+                        maxHeight: 120,
                         width: 302,
-                        paddingTop: 9,                        
-                        paddingLeft: text.trim().length > 0 ? 16 : 48, 
+                        paddingTop: 12,
+                        paddingLeft: text.trim() ? 16 : 48,
                         paddingRight: 40,
-                        paddingBottom: 12,
+                        paddingBottom: 15,
                       }}
                       multiline={true}
                       placeholder="Enter text here..."
                       placeholderTextColor="rgba(147, 147, 159, 1)"
                       value={text}
+                      onFocus={handleInputFocus}
                       onChangeText={(value) => {
                         setText(value);
-                   
                         if (value) {
-                          setTimeout(() => {
-                            setInputHeight((prevHeight) => {
-                              const calculatedHeight = value.split("\n").length * 22 + 16; 
-                              return Math.min(Math.max(calculatedHeight, 48), 120);
-                            });
-                          }, 0);
+                          setInputHeight((prevHeight) => {
+                            const calculatedHeight =
+                              value.split("\n").length * 22 + 16;
+                            return Math.min(
+                              Math.max(calculatedHeight, 48),
+                              120
+                            );
+                          });
                         } else {
-                          setInputHeight(48); 
+                          setInputHeight(48);
                         }
                       }}
                       onContentSizeChange={(event) => {
                         const newHeight = event.nativeEvent.contentSize.height;
                         const maxHeight = 120;
-                        setInputHeight(Math.min(Math.max(newHeight, 48), maxHeight));
+                        setInputHeight(
+                          Math.min(Math.max(newHeight, 48), maxHeight)
+                        );
                       }}
                       maxLength={125}
                     />
                   </View>
                   {!text.trim() && (
-    <TouchableOpacity
-      onPress={() => {
-        setText("");
-        setInputHeight(48);
-      }}
-      style={{
-        position: "absolute",
-        left: 32,
-        bottom: 12,
-        overflow: "hidden",
-      }}
-    >
-      <Image
-        source={require("../image/icon-input.png")}
-        style={{
-          width: 24,
-          height: 24,
-        }}
-      />
-    </TouchableOpacity>
-  )}
-
+                    <TouchableOpacity
+                      onPress={() => {
+                        setText("");
+                        setInputHeight(48);
+                      }}
+                      style={{
+                        position: "absolute",
+                        left: 32,
+                        bottom: 12,
+                        display: text.trim() ? "none" : "flex",
+                      }}
+                    >
+                      <Image
+                        source={require("../image/icon-input.png")}
+                        style={{
+                          width: 24,
+                          height: 24,
+                        }}
+                      />
+                    </TouchableOpacity>
+                  )}
 
                   <TouchableOpacity
                     onPress={() => {
@@ -502,7 +532,7 @@ const ChatScreen = () => {
                       onPress={() => {
                         setText("");
                         sendMessage();
-                      }}
+                      }}                      
                     >
                       <LinearGradient
                         colors={["#448ACA", "#5C34B1"]}
@@ -536,7 +566,7 @@ const ChatScreen = () => {
               </View>
             </View>
           </View>
-        </View>       
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );

@@ -244,14 +244,21 @@ const ExploreScreen = () => {
   };
 
   const createChat = (type, content) => {
+    const category =
+      type === "aiAssistants"
+        ? "aiAssistants"
+        : type === "popularPrompts"
+        ? "popularPrompts"
+        : "advices";
+  
     const firstMessage =
       type === "aiAssistants"
         ? `Hello! I'm your ${content.name}. How can I help you?`
         : type === "popularPrompts"
         ? `Let's discuss: ${content.content.textLarge}`
         : `${content}`;
-
-    navigation.navigate("Chat", { firstMessage });
+  
+    navigation.navigate("Chat", { firstMessage, category });
   };
 
   return (
