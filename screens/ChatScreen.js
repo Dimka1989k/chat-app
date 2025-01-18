@@ -14,6 +14,8 @@ import {
 import { useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const placeholderMessages = [
   "Hello! How can I assist you?",
@@ -33,11 +35,34 @@ const ChatScreen = () => {
   const [marginBottom, setMarginBottom] = useState(-60);
  
 
-  const handleContentSizeChange = (event) => {
-    const { height } = event.nativeEvent.contentSize;
-    const maxHeight = 5 * 22 + 20;
-    setInputHeight(Math.min(Math.max(height, 48), maxHeight));
-  };
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        const storedMessages = await AsyncStorage.getItem("messages");
+        if (storedMessages) {
+          setMessages(JSON.parse(storedMessages));
+        }
+      } catch (error) {
+        console.error("Error loading messages", error); 
+      }
+    };
+
+    loadMessages();
+  }, []);
+
+
+  useEffect(() => {
+    const saveMessages = async () => {
+      try {
+        await AsyncStorage.setItem("messages", JSON.stringify(messages));
+      } catch (error) {
+        console.error("Error saving message to storage", error);
+      }
+    };
+
+    saveMessages();
+  }, [messages]);
 
  
   useEffect(() => {    
@@ -384,16 +409,16 @@ const ChatScreen = () => {
                       value={text}
                       onChangeText={(value) => {
                         setText(value);
-                        // Перевірка на пустий текст для встановлення висоти
+                   
                         if (value) {
                           setTimeout(() => {
                             setInputHeight((prevHeight) => {
-                              const calculatedHeight = value.split("\n").length * 22 + 16; // Розрахунок висоти
+                              const calculatedHeight = value.split("\n").length * 22 + 16; 
                               return Math.min(Math.max(calculatedHeight, 48), 120);
                             });
                           }, 0);
                         } else {
-                          setInputHeight(48); // Повертаємо висоту за замовчуванням, якщо текст пустий
+                          setInputHeight(48); 
                         }
                       }}
                       onContentSizeChange={(event) => {

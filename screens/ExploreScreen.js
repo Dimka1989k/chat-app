@@ -23,7 +23,7 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
-// import AppLoading from "expo-app-loading";
+
 
 const ExploreScreen = () => {
   const navigation = useNavigation();
